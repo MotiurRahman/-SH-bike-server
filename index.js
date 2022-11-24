@@ -33,20 +33,6 @@ function verifyToken(req, res, next) {
   });
 }
 
-app.get("/jwt", (req, res) => {
-  const email = req.query.email;
-
-  const token = jwt.sign(
-    {
-      email,
-    },
-    process.env.ACCESS_TOKEN,
-    { expiresIn: 60 * 60 }
-  );
-
-  res.send(token);
-});
-
 // End json webtoken related function
 
 // MongoDB Connection Related code
@@ -71,9 +57,10 @@ try {
 
   const bookingCollection = client.db("shBiker").collection("bookings");
   const usersCollection = client.db("shBiker").collection("users");
-  //const doctorsCollection = client.db("shBiker").collection("doctors");
+  const productsCollection = client.db("shBiker").collection("products");
   const paymentsCollection = client.db("shBiker").collection("payments");
 
+  //verify admin middleware
   const verifyAdmin = async (req, res, next) => {
     const decodedEmail = req.decoded.email;
     const query = { email: decodedEmail };
@@ -83,6 +70,33 @@ try {
     }
     next();
   };
+
+  app.get("/jwt", async (req, res) => {
+    const email = req.query.email;
+    const query = { email: email };
+    const user = await usersCollection.findOne(query);
+    if (user) {
+      var token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+        expiresIn: "1h",
+      });
+      console.log(token);
+      return res.send({ accessToken: token });
+    }
+
+    res.status(403).send({ accessToken: "" });
+  });
+
+  app.post("/user", async (req, res) => {
+    const user = req.body;
+    const query = { email: user.email };
+    const userResult = await usersCollection.findOne(query);
+    if (!userResult) {
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    } else {
+      res.send({ status: 300, message: "already have an account" });
+    }
+  });
 } finally {
 }
 
