@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 require("dotenv").config();
@@ -78,7 +78,7 @@ try {
     const user = await usersCollection.findOne(query);
     if (user) {
       var token = jwt.sign({ email }, process.env.ACCESS_TOKEN);
-      console.log(token);
+      console.log("token", token);
       return res.send({ accessToken: token });
     }
 
@@ -116,11 +116,66 @@ try {
     const product = req.body;
     console.log(product);
     const decodedEmail = req.decoded.email;
+    product.email = decodedEmail;
+    product.saleStates = "available";
     const query = { email: decodedEmail, role: "seller" };
     const userResult = await usersCollection.findOne(query);
     console.log("product", userResult);
     if (userResult) {
       const result = await productsCollection.insertOne(product);
+      res.send(result);
+    } else {
+      return res.status(403).send({ message: "forbidden access" });
+    }
+  });
+
+  app.get("/myproducts", verifyToken, async (req, res) => {
+    const decodedEmail = req.decoded.email;
+    const query = { email: decodedEmail, role: "seller" };
+    const userResult = await usersCollection.findOne(query);
+    //console.log("product", userResult);
+    if (userResult) {
+      const result = await productsCollection
+        .find({ email: decodedEmail })
+        .toArray();
+      res.send(result);
+    } else {
+      return res.status(403).send({ message: "forbidden access" });
+    }
+  });
+
+  //Delete Product
+  app.delete("/myproducts", verifyToken, async (req, res) => {
+    const decodedEmail = req.decoded.email;
+    const product_id = req.query.id;
+    const query = { email: decodedEmail, role: "seller" };
+    const userResult = await usersCollection.findOne(query);
+    //console.log("product", userResult);
+    if (userResult) {
+      const result = await productsCollection.deleteOne({
+        _id: ObjectId(product_id),
+      });
+      res.send(result);
+    } else {
+      return res.status(403).send({ message: "forbidden access" });
+    }
+  });
+
+  //Patch Product
+  app.patch("/myproducts", verifyToken, async (req, res) => {
+    const decodedEmail = req.decoded.email;
+    const product_id = req.query.id;
+    const query = { email: decodedEmail, role: "seller" };
+    const userResult = await usersCollection.findOne(query);
+    if (userResult) {
+      const filter = { _id: ObjectId(product_id) };
+      const updatedDoc = {
+        $set: {
+          advertise: true,
+        },
+      };
+
+      const result = await productsCollection.updateOne(filter, updatedDoc);
       res.send(result);
     } else {
       return res.status(403).send({ message: "forbidden access" });
