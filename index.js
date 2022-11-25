@@ -59,6 +59,7 @@ try {
   const usersCollection = client.db("shBiker").collection("users");
   const productsCollection = client.db("shBiker").collection("products");
   const paymentsCollection = client.db("shBiker").collection("payments");
+  const categoriesCollection = client.db("shBiker").collection("categories");
 
   //verify admin middleware
   const verifyAdmin = async (req, res, next) => {
@@ -103,6 +104,13 @@ try {
     const query = { email: email };
     const user = await usersCollection.findOne(query);
     res.send({ role: user?.role });
+  });
+
+  // get all category
+  app.get("/categories", async (req, res) => {
+    const query = {};
+    const result = await categoriesCollection.find(query).toArray();
+    res.send(result);
   });
 } finally {
 }
