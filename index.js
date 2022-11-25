@@ -181,6 +181,28 @@ try {
       return res.status(403).send({ message: "forbidden access" });
     }
   });
+
+  //Get all seller
+  app.get("/allsellers", verifyToken, async (req, res) => {
+    const query = { role: "seller" };
+    const allSeller = await usersCollection.find(query).toArray();
+    res.send(allSeller);
+  });
+
+  //Get all buyer
+  app.get("/allbuyers", verifyToken, async (req, res) => {
+    const query = { role: "buyer" };
+    const allBuyer = await usersCollection.find(query).toArray();
+    res.send(allBuyer);
+  });
+
+  app.delete("/user", verifyToken, async (req, res) => {
+    const user_id = req.query.id;
+    const result = await usersCollection.deleteOne({
+      _id: ObjectId(user_id),
+    });
+    res.send(result);
+  });
 } finally {
 }
 
