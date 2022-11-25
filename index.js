@@ -77,9 +77,7 @@ try {
     const query = { email: email };
     const user = await usersCollection.findOne(query);
     if (user) {
-      var token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-        expiresIn: "1h",
-      });
+      var token = jwt.sign({ email }, process.env.ACCESS_TOKEN);
       console.log(token);
       return res.send({ accessToken: token });
     }
@@ -111,6 +109,22 @@ try {
     const query = {};
     const result = await categoriesCollection.find(query).toArray();
     res.send(result);
+  });
+
+  // Add Products
+  app.post("/addProduct", verifyToken, async (req, res) => {
+    const product = req.body;
+    console.log(product);
+    const decodedEmail = req.decoded.email;
+    const query = { email: decodedEmail, role: "seller" };
+    const userResult = await usersCollection.findOne(query);
+    console.log("product", userResult);
+    if (userResult) {
+      const result = await productsCollection.insertOne(product);
+      res.send(result);
+    } else {
+      return res.status(403).send({ message: "forbidden access" });
+    }
   });
 } finally {
 }
