@@ -97,6 +97,15 @@ try {
     }
   });
 
+  // Get user using specific email
+
+  app.get("/user", async (req, res) => {
+    const email = req.query.email;
+    const query = { email: email };
+    const selerResult = await usersCollection.findOne(query);
+    res.send(selerResult);
+  });
+
   app.get("/user/role/:email", async (req, res) => {
     const email = req.params.email;
     const query = { email: email };
@@ -114,10 +123,10 @@ try {
   // Add Products
   app.post("/addProduct", verifyToken, async (req, res) => {
     const product = req.body;
+    product.dateAdded = new Date();
     console.log(product);
+
     const decodedEmail = req.decoded.email;
-    product.email = decodedEmail;
-    product.saleStates = "available";
     const query = { email: decodedEmail, role: "seller" };
     const userResult = await usersCollection.findOne(query);
     console.log("product", userResult);
@@ -189,6 +198,20 @@ try {
     res.send(allSeller);
   });
 
+  // Verify seller
+  app.patch("/user", verifyToken, async (req, res) => {
+    const user_id = req.query.id;
+    const filter = { _id: ObjectId(user_id) };
+    const updatedDoc = {
+      $set: {
+        verified: true,
+      },
+    };
+
+    const result = await usersCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  });
+
   //Get all buyer
   app.get("/allbuyers", verifyToken, async (req, res) => {
     const query = { role: "buyer" };
@@ -196,12 +219,29 @@ try {
     res.send(allBuyer);
   });
 
+  // Delete any user
   app.delete("/user", verifyToken, async (req, res) => {
     const user_id = req.query.id;
     const result = await usersCollection.deleteOne({
       _id: ObjectId(user_id),
     });
     res.send(result);
+  });
+
+  //Get all categories
+  app.get("/allcategories", async (req, res) => {
+    const query = {};
+    const allcategories = await categoriesCollection.find(query).toArray();
+    res.send(allcategories);
+  });
+
+  //Get specific category product
+  app.get("/allcategories/:category", async (req, res) => {
+    const category = req.params.category;
+    const query = { category: category };
+    const categoryPorduct = await productsCollection.find(query).toArray();
+    //console.log(categoryPorduct);
+    res.send(categoryPorduct);
   });
 } finally {
 }
