@@ -243,6 +243,14 @@ try {
     //console.log(categoryPorduct);
     res.send(categoryPorduct);
   });
+
+  //get all advertise items
+  app.get("/advertise", async (req, res) => {
+    const query = { advertise: true, saleStatus: "available" };
+    const products = await productsCollection.find(query).toArray();
+    //console.log(categoryPorduct);
+    res.send(products);
+  });
 } finally {
 }
 
