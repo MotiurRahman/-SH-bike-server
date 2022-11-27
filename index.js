@@ -271,6 +271,22 @@ try {
     const result = await bookingCollection.insertOne(booking);
     res.send(result);
   });
+
+  // get all of my order API
+  app.get("/myorders", async (req, res) => {
+    const email = req.query.email;
+    const query = { email: email };
+    const orders = await bookingCollection.find(query).toArray();
+    res.send(orders);
+  });
+
+  // Remove my order API
+  app.delete("/myorders", async (req, res) => {
+    const id = req.query.id;
+    const query = { _id: ObjectId(id) };
+    const orders = await bookingCollection.deleteOne(query);
+    res.send(orders);
+  });
 } finally {
 }
 
