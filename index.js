@@ -251,6 +251,26 @@ try {
     //console.log(categoryPorduct);
     res.send(products);
   });
+
+  // add bookings API
+  app.post("/bookings", async (req, res) => {
+    const booking = req.body;
+
+    const query = {
+      bookingID: booking.bookingID,
+      email: booking.email,
+    };
+
+    const alreadyBooked = await bookingCollection.find(query).toArray();
+    //console.log(alreadyBooked);
+    if (alreadyBooked.length) {
+      const message = `You already have a booking on ${booking.productName}`;
+      return res.send({ acknowledged: false, message });
+    }
+
+    const result = await bookingCollection.insertOne(booking);
+    res.send(result);
+  });
 } finally {
 }
 
