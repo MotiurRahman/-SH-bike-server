@@ -333,7 +333,7 @@ try {
     //console.log(wishProduct);
 
     const query = {
-      wishID: wishProduct.wishID,
+      bookingID: wishProduct.bookingID,
       email: wishProduct.email,
     };
 
@@ -381,8 +381,10 @@ try {
   // Get wishlist based on id
   app.get("/wishlist/:id", async (req, res) => {
     const id = req.params.id;
+    // console.log(id);
     const query = { _id: ObjectId(id) };
-    const wishlist = await productsCollection.findOne(query);
+    const wishlist = await wishListCollection.findOne(query);
+    console.log(wishlist);
     res.send(wishlist);
   });
 
@@ -419,6 +421,22 @@ try {
       },
     };
     const updateResult = await bookingCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  });
+
+  app.post("/wishListPayments", async (req, res) => {
+    const payment = req.body;
+    const result = await paymentsCollection.insertOne(payment);
+    const id = payment.bookingId;
+    const filter = { _id: ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        paid: true,
+        transactionId: payment.transactionId,
+      },
+    };
+    const updateResult = await wishListCollection.updateOne(filter, updatedDoc);
+    console.log("wishListPayments", updateResult);
     res.send(result);
   });
 } finally {
