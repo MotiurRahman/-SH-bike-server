@@ -60,6 +60,7 @@ try {
   const usersCollection = client.db("shBiker").collection("users");
   const productsCollection = client.db("shBiker").collection("products");
   const paymentsCollection = client.db("shBiker").collection("payments");
+  const wishListCollection = client.db("shBiker").collection("wishList ");
   const categoriesCollection = client.db("shBiker").collection("categories");
 
   //verify admin middleware
@@ -324,6 +325,65 @@ try {
     const query = { _id: ObjectId(id) };
     const orders = await bookingCollection.deleteOne(query);
     res.send(orders);
+  });
+
+  // add wishlist API
+  app.post("/wishlist", async (req, res) => {
+    const wishProduct = req.body;
+    //console.log(wishProduct);
+
+    const query = {
+      wishID: wishProduct.wishID,
+      email: wishProduct.email,
+    };
+
+    const alreadyListed = await wishListCollection.find(query).toArray();
+    console.log(alreadyListed);
+    if (alreadyListed.length) {
+      const message = `You already have a wishlisted on ${wishProduct.productName}`;
+      return res.send({ acknowledged: false, message });
+    }
+    const result = await wishListCollection.insertOne(wishProduct);
+    res.send(result);
+  });
+
+  // get all of my wishlist API
+  app.get("/wishlist", verifyToken, async (req, res) => {
+    const decodedEmail = req.decoded.email;
+    const email = req.query.email;
+
+    if (decodedEmail != email) {
+      return res
+        .status(401)
+        .send({ status: 401, message: "unauthorization access" });
+    } else {
+      let query = { email: email };
+      const userResult = await usersCollection.findOne(query);
+      if (userResult) {
+        const orders = await wishListCollection.find(query).toArray();
+        res.send(orders);
+      } else {
+        return res
+          .status(401)
+          .send({ status: 401, message: "unauthorization access" });
+      }
+    }
+  });
+
+  // Remove my order API
+  app.delete("/wishlist", async (req, res) => {
+    const id = req.query.id;
+    const query = { _id: ObjectId(id) };
+    const orders = await wishListCollection.deleteOne(query);
+    res.send(orders);
+  });
+
+  // Get wishlist based on id
+  app.get("/wishlist/:id", async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: ObjectId(id) };
+    const wishlist = await productsCollection.findOne(query);
+    res.send(wishlist);
   });
 
   //Payment
