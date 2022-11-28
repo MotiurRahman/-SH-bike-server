@@ -4,6 +4,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const app = express();
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 // Middleware
 app.use(express());
@@ -170,7 +171,7 @@ try {
     }
   });
 
-  //Patch Product
+  //Patch for advertise Product
   app.patch("/myproducts", verifyToken, async (req, res) => {
     const decodedEmail = req.decoded.email;
     const product_id = req.query.id;
@@ -189,6 +190,20 @@ try {
     } else {
       return res.status(403).send({ message: "forbidden access" });
     }
+  });
+
+  //Patch for advertise Product
+  app.patch("/sold-out", verifyToken, async (req, res) => {
+    const product_id = req.query.id;
+    const filter = { _id: ObjectId(product_id) };
+    const updatedDoc = {
+      $set: {
+        saleStatus: "sold",
+      },
+    };
+    const result = await productsCollection.updateOne(filter, updatedDoc);
+    console.log(result);
+    res.send(result);
   });
 
   //Get all seller
@@ -238,7 +253,7 @@ try {
   //Get specific category product
   app.get("/allcategories/:category", async (req, res) => {
     const category = req.params.category;
-    const query = { category: category };
+    const query = { category: category, saleStatus: "available" };
     const categoryPorduct = await productsCollection.find(query).toArray();
     //console.log(categoryPorduct);
     res.send(categoryPorduct);
@@ -272,12 +287,35 @@ try {
     res.send(result);
   });
 
+  // Get booking based on id
+  app.get("/bookings/:id", async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: ObjectId(id) };
+    const booking = await bookingCollection.findOne(query);
+    res.send(booking);
+  });
+
   // get all of my order API
-  app.get("/myorders", async (req, res) => {
+  app.get("/myorders", verifyToken, async (req, res) => {
+    const decodedEmail = req.decoded.email;
     const email = req.query.email;
-    const query = { email: email };
-    const orders = await bookingCollection.find(query).toArray();
-    res.send(orders);
+
+    if (decodedEmail != email) {
+      return res
+        .status(401)
+        .send({ status: 401, message: "unauthorization access" });
+    } else {
+      let query = { email: email };
+      const userResult = await usersCollection.findOne(query);
+      if (userResult) {
+        const orders = await bookingCollection.find(query).toArray();
+        res.send(orders);
+      } else {
+        return res
+          .status(401)
+          .send({ status: 401, message: "unauthorization access" });
+      }
+    }
   });
 
   // Remove my order API
@@ -286,6 +324,42 @@ try {
     const query = { _id: ObjectId(id) };
     const orders = await bookingCollection.deleteOne(query);
     res.send(orders);
+  });
+
+  //Payment
+  app.post("/create-payment-intent", async (req, res) => {
+    const bookings = req.body;
+    const { resalePrice } = bookings;
+
+    const amount = resalePrice * 100;
+
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: "usd",
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  });
+
+  app.post("/payments", async (req, res) => {
+    const payment = req.body;
+    const result = await paymentsCollection.insertOne(payment);
+    const id = payment.bookingId;
+    const filter = { _id: ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        paid: true,
+        transactionId: payment.transactionId,
+      },
+    };
+    const updateResult = await bookingCollection.updateOne(filter, updatedDoc);
+    res.send(result);
   });
 } finally {
 }
